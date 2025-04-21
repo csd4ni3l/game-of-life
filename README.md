@@ -1,0 +1,1 @@
+Game of life recreated with Python and the Arcade and pyglet modules.

@@ -1,0 +1,13 @@
+[project]
+name = "game-of-life"
+version = "0.1.0"
+description = "Game of life recreated with Python and the Arcade and pyglet modules."
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "arcade",
+    "pypresence>=4.3.0",
+]
+
+[tool.uv.sources]
+arcade = { git = "https://github.com/pythonarcade/arcade.git", rev = "gui/controller" }
