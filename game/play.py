@@ -1,4 +1,4 @@
-import arcade, arcade.gui, random, math
+import arcade, arcade.gui, random, math, copy
 from utils.constants import COLS, ROWS, CELL_SIZE, SPACING, NEIGHBORS
 
 class Game(arcade.gui.UIView):
@@ -34,7 +34,7 @@ class Game(arcade.gui.UIView):
         self.fps_label = arcade.gui.UILabel(text="FPS: 10", font_name="Protest Strike", font_size=16)
         self.info_box.add(self.fps_label)
 
-        arcade.schedule(self.update_generation, 1 / 10)
+        arcade.schedule(self.update_generation, 1 / self.generation_fps)
 
     def setup_grid(self, randomized=False):
         self.spritelist.clear()
@@ -65,6 +65,8 @@ class Game(arcade.gui.UIView):
                 self.pypresence_generation_count = 0
                 self.pypresence_client.update(state='In Game', details=f'Generation: {self.generation} Population: {self.population}', start=self.pypresence_client.start_time)
 
+            next_grid = {y: {x: cell for x, cell in row.items()} for y, row in self.cell_grid.items()}
+
             for x in range(0, COLS):
                 for y in range(0, ROWS):
                     cell_neighbors = 0
@@ -83,15 +85,17 @@ class Game(arcade.gui.UIView):
                             self.population -= 1
 
                             self.spritelist.remove(self.cell_grid[y][x])
-                            del self.cell_grid[y][x]
-                            self.cell_grid[y][x] = None
+                            del next_grid[y][x]
+                            next_grid[y][x] = None
 
                     elif cell_neighbors == 3: # newborn
                         self.population += 1
 
                         cell = arcade.SpriteSolidColor(CELL_SIZE, CELL_SIZE, center_x=self.start_x + x * (CELL_SIZE + SPACING), center_y=self.start_y + y * (CELL_SIZE + SPACING), color=arcade.color.WHITE)
-                        self.cell_grid[y][x] = cell
+                        next_grid[y][x] = cell
                         self.spritelist.append(cell)
+
+            self.cell_grid = next_grid
 
             self.population_label.text = f"Population: {self.population}"
             self.generation_label.text = f"Generation: {self.generation}"
@@ -101,6 +105,10 @@ class Game(arcade.gui.UIView):
 
         if symbol == arcade.key.SPACE:
             self.running = not self.running
+        elif symbol == arcade.key.C:
+            arcade.unschedule(self.update_generation)
+            self.setup_grid()
+            arcade.schedule(self.update_generation, 1 / self.generation_fps)
 
     def on_update(self, delta_time: float) -> bool | None:
         super().on_update(delta_time)
@@ -116,6 +124,9 @@ class Game(arcade.gui.UIView):
             grid_col = math.ceil((self.window.mouse.data["x"] - self.start_x + (CELL_SIZE / 2)) // (CELL_SIZE + SPACING)) # type: ignore
             grid_row = math.ceil((self.window.mouse.data["y"] - self.start_y + (CELL_SIZE / 2)) // (CELL_SIZE + SPACING)) # type: ignore
 
+            if grid_col < 0 or grid_row < 0 or grid_row >= ROWS or grid_col >= COLS:
+                return
+
             if self.cell_grid[grid_row][grid_col] is None:
                 self.population += 1
 
@@ -123,7 +134,20 @@ class Game(arcade.gui.UIView):
                 self.cell_grid[grid_row][grid_col] = cell
                 self.spritelist.append(cell)
 
+        elif self.window.mouse[arcade.MOUSE_BUTTON_RIGHT]: # type: ignore
+            grid_col = math.ceil((self.window.mouse.data["x"] - self.start_x + (CELL_SIZE / 2)) // (CELL_SIZE + SPACING)) # type: ignore
+            grid_row = math.ceil((self.window.mouse.data["y"] - self.start_y + (CELL_SIZE / 2)) // (CELL_SIZE + SPACING)) # type: ignore
+
+            if self.cell_grid[grid_row][grid_col] is not None:
+                self.population -= 1
+
+                self.spritelist.remove(self.cell_grid[grid_row][grid_col])
+                del self.cell_grid[grid_row][grid_col]
+                self.cell_grid[grid_row][grid_col] = None
+
     def on_draw(self):
         super().on_draw()
+
+        arcade.draw_rect_outline(arcade.rect.LBWH(self.start_x, self.start_y, COLS * (CELL_SIZE + SPACING), ROWS * (CELL_SIZE + SPACING)), arcade.color.WHITE)
 
         self.spritelist.draw()
