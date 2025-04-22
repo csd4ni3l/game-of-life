@@ -48,6 +48,13 @@ if os.path.exists('settings.json'):
     vsync = settings['vsync']
     fps_limit = settings['fps_limit']
 else:
+    resolution = get_closest_resolution()
+    antialiasing = 4
+    fullscreen = False
+    style = arcade.Window.WINDOW_STYLE_DEFAULT
+    vsync = True
+    fps_limit = 0
+
     settings = {
         "music": True,
         "music_volume": 50,
@@ -58,13 +65,6 @@ else:
         "fps_limit": 60,
         "discord_rpc": True
     }
-
-    resolution = get_closest_resolution()
-    antialiasing = 4
-    fullscreen = False
-    style = arcade.Window.WINDOW_STYLE_DEFAULT
-    vsync = True
-    fps_limit = 0
 
     with open("settings.json", "w") as file:
         file.write(json.dumps(settings))
