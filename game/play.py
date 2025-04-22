@@ -158,7 +158,7 @@ class Game(arcade.gui.UIView):
                 if time.perf_counter() - self.last_create_sound >= 0.05:
                     self.last_create_sound = time.perf_counter()
                     if self.settings_dict.get("sfx", True):
-                        create_sound.play(volume=self.settings_dict.get("sfx_volume", 50) / 100, loop=True)
+                        create_sound.play(volume=self.settings_dict.get("sfx_volume", 50) / 100)
 
                 self.sprite_grid[grid_row][grid_col].visible = True
                 self.cell_grid[grid_row][grid_col] = 1
@@ -173,7 +173,7 @@ class Game(arcade.gui.UIView):
             if self.cell_grid[grid_row][grid_col] == 1:
                 self.population -= 1
                 if self.settings_dict.get("sfx", True):
-                    destroy_sound.play(volume=self.settings_dict.get("sfx_volume", 50) / 100, loop=True)
+                    destroy_sound.play(volume=self.settings_dict.get("sfx_volume", 50) / 100)
                 self.sprite_grid[grid_row][grid_col].visible = False
                 self.cell_grid[grid_row][grid_col] = 0
 
