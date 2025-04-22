@@ -65,7 +65,7 @@ def on_exception(*exc_info):
     logging.error(f"Unhandled exception:\n{''.join(traceback.format_exception(exc_info[1], limit=None))}")
 
 def get_closest_resolution():
-    allowed_resolutions = [(800, 600), (1024, 768), (1280, 720), (1366, 768), (1440, 900), (1600,900), (1920,1080), (2560,1440), (3840,2160)]
+    allowed_resolutions = [(1366, 768), (1440, 900), (1600,900), (1920,1080), (2560,1440), (3840,2160)]
     screen_width, screen_height = arcade.get_screens()[0].width, arcade.get_screens()[0].height
     if (screen_width, screen_height) in allowed_resolutions:
         if not allowed_resolutions.index((screen_width, screen_height)) == 0:
