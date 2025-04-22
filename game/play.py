@@ -76,6 +76,47 @@ class Game(arcade.gui.UIView):
                 self.spritelist.append(cell)
 
     def update_generation(self, _):
+        if self.window.keyboard[arcade.key.UP] or self.window.keyboard[arcade.key.DOWN]: # type: ignore
+            self.generation_fps += 1 if self.window.keyboard[arcade.key.UP] else -1 # type: ignore
+            if self.generation_fps < 1:
+                self.generation_fps = 1
+            self.fps_label.text = f"FPS: {self.generation_fps}"
+
+            arcade.unschedule(self.update_generation)
+            arcade.schedule(self.update_generation, 1 / self.generation_fps)
+
+        if self.window.mouse[arcade.MOUSE_BUTTON_LEFT]: # type: ignore
+            grid_col = math.ceil((self.window.mouse.data["x"] - self.start_x + (CELL_SIZE / 2)) // (CELL_SIZE + SPACING)) # type: ignore
+            grid_row = math.ceil((self.window.mouse.data["y"] - self.start_y + (CELL_SIZE / 2)) // (CELL_SIZE + SPACING)) # type: ignore
+
+            if grid_col < 0 or grid_row < 0 or grid_row >= ROWS or grid_col >= COLS:
+                return
+
+            if self.cell_grid[grid_row][grid_col] == 0:
+                self.population += 1
+
+                if time.perf_counter() - self.last_create_sound >= 0.05:
+                    self.last_create_sound = time.perf_counter()
+                    if self.settings_dict.get("sfx", True):
+                        create_sound.play(volume=self.settings_dict.get("sfx_volume", 50) / 100)
+
+                self.sprite_grid[grid_row][grid_col].visible = True
+                self.cell_grid[grid_row][grid_col] = 1
+
+        elif self.window.mouse[arcade.MOUSE_BUTTON_RIGHT]: # type: ignore
+            grid_col = math.ceil((self.window.mouse.data["x"] - self.start_x + (CELL_SIZE / 2)) // (CELL_SIZE + SPACING)) # type: ignore
+            grid_row = math.ceil((self.window.mouse.data["y"] - self.start_y + (CELL_SIZE / 2)) // (CELL_SIZE + SPACING)) # type: ignore
+
+            if grid_col < 0 or grid_row < 0 or grid_row >= ROWS or grid_col >= COLS:
+                return
+
+            if self.cell_grid[grid_row][grid_col] == 1:
+                self.population -= 1
+                if self.settings_dict.get("sfx", True):
+                    destroy_sound.play(volume=self.settings_dict.get("sfx_volume", 50) / 100)
+                self.sprite_grid[grid_row][grid_col].visible = False
+                self.cell_grid[grid_row][grid_col] = 0
+
         if self.running:
             self.generation += 1
 
@@ -132,50 +173,6 @@ class Game(arcade.gui.UIView):
             arcade.unschedule(self.update_generation)
             self.setup_grid()
             arcade.schedule(self.update_generation, 1 / self.generation_fps)
-
-    def on_update(self, delta_time: float) -> bool | None:
-        super().on_update(delta_time)
-
-        if self.window.keyboard[arcade.key.UP] or self.window.keyboard[arcade.key.DOWN]: # type: ignore
-            self.generation_fps += 1 if self.window.keyboard[arcade.key.UP] else -1 # type: ignore
-            if self.generation_fps < 1:
-                self.generation_fps = 1
-            self.fps_label.text = f"FPS: {self.generation_fps}"
-
-            arcade.unschedule(self.update_generation)
-            arcade.schedule(self.update_generation, 1 / self.generation_fps)
-
-        if self.window.mouse[arcade.MOUSE_BUTTON_LEFT]: # type: ignore
-            grid_col = math.ceil((self.window.mouse.data["x"] - self.start_x + (CELL_SIZE / 2)) // (CELL_SIZE + SPACING)) # type: ignore
-            grid_row = math.ceil((self.window.mouse.data["y"] - self.start_y + (CELL_SIZE / 2)) // (CELL_SIZE + SPACING)) # type: ignore
-
-            if grid_col < 0 or grid_row < 0 or grid_row >= ROWS or grid_col >= COLS:
-                return
-
-            if self.cell_grid[grid_row][grid_col] == 0:
-                self.population += 1
-
-                if time.perf_counter() - self.last_create_sound >= 0.05:
-                    self.last_create_sound = time.perf_counter()
-                    if self.settings_dict.get("sfx", True):
-                        create_sound.play(volume=self.settings_dict.get("sfx_volume", 50) / 100)
-
-                self.sprite_grid[grid_row][grid_col].visible = True
-                self.cell_grid[grid_row][grid_col] = 1
-
-        elif self.window.mouse[arcade.MOUSE_BUTTON_RIGHT]: # type: ignore
-            grid_col = math.ceil((self.window.mouse.data["x"] - self.start_x + (CELL_SIZE / 2)) // (CELL_SIZE + SPACING)) # type: ignore
-            grid_row = math.ceil((self.window.mouse.data["y"] - self.start_y + (CELL_SIZE / 2)) // (CELL_SIZE + SPACING)) # type: ignore
-
-            if grid_col < 0 or grid_row < 0 or grid_row >= ROWS or grid_col >= COLS:
-                return
-
-            if self.cell_grid[grid_row][grid_col] == 1:
-                self.population -= 1
-                if self.settings_dict.get("sfx", True):
-                    destroy_sound.play(volume=self.settings_dict.get("sfx_volume", 50) / 100)
-                self.sprite_grid[grid_row][grid_col].visible = False
-                self.cell_grid[grid_row][grid_col] = 0
 
     def on_draw(self):
         super().on_draw()
