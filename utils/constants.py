@@ -6,7 +6,7 @@ COLS = 80
 ROWS = 60
 CELL_SIZE = 10
 SPACING = 2
-NEIGHBORS = [0, 1, -1]
+NEIGHBORS = [(-1, 0), (-1, 1), (-1, -1),(0, 0), (0, 1), (0, -1), (1, 0), (1, 1), (1, -1)]
 
 log_dir = 'logs'
 menu_background_color = Color(28, 28, 28)
