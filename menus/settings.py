@@ -117,9 +117,9 @@ class Settings(arcade.gui.UIView):
                     if self.settings_dict.get(setting_dict["config_key"]) == 0:
                         label_text = "FPS Limit: Disabled"
                     else:
-                        label_text = f"FPS Limit: {self.settings_dict.get(setting_dict["config_key"], setting_dict["default"])}"
+                        label_text = f"FPS Limit: {self.settings_dict.get(setting_dict['config_key'], setting_dict['default'])}"
                 else:
-                    label_text = f"{setting}: {int(self.settings_dict.get(setting_dict["config_key"], setting_dict["default"]))}"
+                    label_text = f"{setting}: {int(self.settings_dict.get(setting_dict['config_key'], setting_dict['default']))}"
 
                 label.text = label_text
 
