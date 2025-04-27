@@ -52,7 +52,7 @@ class ErrorView(arcade.gui.UIView):
     def on_show_view(self):
         super().on_show_view()
 
-        self.window.set_caption('ShatterStack - Error')
+        self.window.set_caption('Game Of Life - Error')
         self.window.set_mouse_visible(True)
         self.window.set_exclusive_mouse(False)
         arcade.set_background_color(menu_background_color)
