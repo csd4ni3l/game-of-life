@@ -9,6 +9,7 @@ CELL_SIZE = 10
 SPACING = 2
 NEIGHBORS = [(-1, 0), (-1, 1), (-1, -1),(0, 0), (0, 1), (0, -1), (1, 0), (1, 1), (1, -1)]
 
+discord_presence_id = 1363780625928028200
 log_dir = 'logs'
 menu_background_color = arcade.color.DARK_SLATE_GRAY
 
