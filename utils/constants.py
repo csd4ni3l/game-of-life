@@ -42,3 +42,4 @@ settings = {
     },
     "Credits": {}
 }
+settings_start_category = "Graphics"

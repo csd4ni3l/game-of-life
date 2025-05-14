@@ -10,4 +10,4 @@ dependencies = [
 ]
 
 [tool.uv.sources]
-arcade = { git = "https://github.com/pythonarcade/arcade.git", rev = "gui/controller" }
+arcade = { git = "https://github.com/pythonarcade/arcade.git", rev = "development" }
