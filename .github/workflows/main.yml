@@ -88,6 +88,6 @@ jobs:
           git push origin latest
   
       - name: Create the new release
-        run: gh release create latest downloads/**/GameOfLife-*.zip --title "Latest Build" --notes "Most recent multi-platform builds of ShatterStack"
+        run: gh release create latest downloads/**/GameOfLife-*.zip --title "Latest Build" --notes "Most recent multi-platform builds of Game Of Life"
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
