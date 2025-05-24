@@ -1,2 +1,2 @@
-git+https://github.com/pythonarcade/arcade.git@development
+arcade==3.2.0
 pypresence

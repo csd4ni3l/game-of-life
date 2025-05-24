@@ -5,9 +5,6 @@ description = "Game of life recreated with Python and the Arcade and pyglet modu
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
-    "arcade",
+    "arcade==3.2.0",
     "pypresence>=4.3.0",
 ]
-
-[tool.uv.sources]
-arcade = { git = "https://github.com/pythonarcade/arcade.git", rev = "development" }
