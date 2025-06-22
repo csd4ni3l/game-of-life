@@ -1,4 +1,5 @@
 import arcade, arcade.gui, random, math, copy, time, json, os
+from game.file_support import load_file
 from utils.constants import COLS, ROWS, CELL_SIZE, SPACING, NEIGHBORS, button_style
 from utils.preload import create_sound, destroy_sound, button_texture, button_hovered_texture
 
@@ -27,7 +28,7 @@ class Game(arcade.gui.UIView):
 
     def on_show_view(self):
         super().on_show_view()
-        self.setup_grid()
+        self.setup_grid(load_existing=bool(self.cell_grid))
 
         self.anchor = self.add_widget(arcade.gui.UIAnchorLayout(size_hint=(1, 1)))
         self.info_box = self.anchor.add(arcade.gui.UIBoxLayout(space_between=5, vertical=False), anchor_x="center", anchor_y="top")
@@ -49,6 +50,10 @@ class Game(arcade.gui.UIView):
         self.load_button.on_click = lambda event: self.load()
         self.anchor.add(self.load_button, anchor_x="left", anchor_y="bottom", align_x=5, align_y=5)
 
+        self.save_button = arcade.gui.UITextureButton(texture=button_texture, texture_hovered=button_hovered_texture, text="Save", style=button_style, width=200, height=100)
+        self.save_button.on_click = lambda event: self.save()
+        self.anchor.add(self.save_button, anchor_x="right", anchor_y="bottom", align_x=-5, align_y=5)
+
         arcade.schedule(self.update_generation, 1 / self.generation_fps)
 
     def main_exit(self):
@@ -58,24 +63,16 @@ class Game(arcade.gui.UIView):
     def setup_grid(self, load_existing=False, randomized=False):
         self.spritelist.clear()
 
-        for row in range(ROWS):
-            self.cell_grid[row] = {}
-            self.sprite_grid[row] = {}
-
         if self.load_from:
-            loaded_data = []
-            with open(self.load_from, "r") as file:
-                data = file.read().splitlines()
-                for line in data:
-                    if line == "#Life 1.06":
-                        continue
-
-                    x, y = line.split(" ")
-                    x = int(COLS / 2 + int(x))
-                    y = int(ROWS / 2 + int(y))
-                    loaded_data.append((y, x))
+            loaded_data = load_file(COLS / 2, ROWS / 2, self.load_from)
 
         for row in range(ROWS):
+            if not row in self.cell_grid:
+                self.cell_grid[row] = {}
+
+            if not row in self.sprite_grid:
+                self.sprite_grid[row] = {}
+
             for col in range(COLS):
                 if self.load_from:
                     self.cell_grid[row][col] = 1 if (row, col) in loaded_data else 0
@@ -199,8 +196,14 @@ class Game(arcade.gui.UIView):
                 self.cell_grid[grid_row][grid_col] = 0
 
     def load(self):
+        arcade.unschedule(self.update_generation)
         from game.file_manager import FileManager
-        self.window.show_view(FileManager(os.path.expanduser("~"), [".txt"], self.pypresence_client, self.generation, self.running, self.cell_grid))
+        self.window.show_view(FileManager(os.path.expanduser("~"), [".txt", ".rle"], False, self.pypresence_client, self.generation, self.running, self.cell_grid))
+
+    def save(self):
+        arcade.unschedule(self.update_generation)
+        from game.file_manager import FileManager
+        self.window.show_view(FileManager(os.path.expanduser("~"), [".txt", ".rle"], True, self.pypresence_client, self.generation, self.running, self.cell_grid))
 
     def on_draw(self):
         super().on_draw()

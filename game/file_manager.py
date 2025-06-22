@@ -1,20 +1,21 @@
 import arcade, arcade.gui, os, time
 
-from utils.constants import button_style
+from game.file_support import save_file
+from utils.constants import button_style, dropdown_style
 from utils.preload import button_texture, button_hovered_texture
 
 from arcade.gui.experimental.scroll_area import UIScrollArea, UIScrollBar
 
 class FileManager(arcade.gui.UIView):
-    def __init__(self, start_directory, allowed_extensions, *args):
+    def __init__(self, start_directory, allowed_extensions, save=False, *args):
         super().__init__()
 
         self.current_directory = start_directory
         self.allowed_extensions = allowed_extensions
         self.file_buttons = []
         self.submitted_content = ""
-        self.done = False
         self.args = args
+        self.save = save
 
         self.anchor = self.ui.add(arcade.gui.UIAnchorLayout(size_hint=(1, 1)))
         self.box = self.anchor.add(arcade.gui.UIBoxLayout(size_hint=(0.7, 0.7)), anchor_x="center", anchor_y="center")
@@ -41,15 +42,23 @@ class FileManager(arcade.gui.UIView):
         self.back_button = self.anchor.add(arcade.gui.UITextureButton(texture=button_texture, texture_hovered=button_hovered_texture, text='<--', style=button_style, width=100, height=50), anchor_x="left", anchor_y="top", align_x=5, align_y=-5)
         self.back_button.on_click = lambda event: self.change_directory(os.path.dirname(self.current_directory))
 
+        if self.save:
+            self.save_filename_input = self.anchor.add(arcade.gui.UIInputText(font_name="Roboto", font_size=24, width=self.window.width / 2, height=self.window.height / 15), anchor_x="center", anchor_y="bottom", align_y=20)
+            # self.save_file_type_dropdown = self.anchor.add(arcade.gui.UIDropdown(options=["life_5", "life_6", "rle"], default="rle", width=self.window.width / 5, height=self.window.height / 15, primary_style=dropdown_style, dropdown_style=dropdown_style, active_style=dropdown_style), anchor_x="center", anchor_y="bottom", align_y=20, align_x=self.window.width / 7)
+            self.save_button = self.anchor.add(arcade.gui.UITextureButton(texture=button_texture, texture_hovered=button_hovered_texture, text='Save', style=button_style, width=200, height=100), anchor_x="right", anchor_y="bottom", align_x=-35, align_y=5)
+            self.save_button.on_click = lambda event: self.save_content()
+
         self.show_directory()
 
     def submit(self, content):
         self.submitted_content = content
-        self.done = True
 
         if os.path.isfile(content):
             from game.play import Game
             self.window.show_view(Game(*self.args, load_from=self.submitted_content))
+
+    def save_content(self):
+        save_file(self.args[-1], f"{self.current_directory}/{self.save_filename_input.text}", "rle")
 
     def get_content(self, directory):
         if not directory in self.content_cache or time.perf_counter() - self.content_cache[directory][-1] >= 30:
@@ -108,6 +117,12 @@ class FileManager(arcade.gui.UIView):
                 self.file_buttons[-1].on_click = lambda event, directory=f"{self.current_directory}/{file}": self.change_directory(directory)
             else:
                 self.file_buttons[-1].on_click = lambda event, file=f"{self.current_directory}/{file}": self.submit(file)
+
+    def on_key_press(self, symbol: int, modifiers: int) -> bool | None:
+        super().on_key_press(symbol, modifiers)
+        if symbol == arcade.key.ESCAPE:
+            from game.play import Game
+            self.window.show_view(Game(*self.args))
 
     def change_directory(self, directory):
         if directory.startswith("//"): # Fix / paths
