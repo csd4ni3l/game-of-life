@@ -77,7 +77,10 @@ window = arcade.Window(width=resolution[0], height=resolution[1], title='Game Of
 if vsync:
     window.set_vsync(True)
     display_mode = window.display.get_default_screen().get_mode()
-    refresh_rate = display_mode.rate
+    if display_mode:
+        refresh_rate = display_mode.rate
+    else:
+        refresh_rate = 60
     window.set_update_rate(1 / refresh_rate)
     window.set_draw_rate(1 / refresh_rate)
 elif not fps_limit == 0:

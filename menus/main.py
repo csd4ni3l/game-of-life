@@ -1,5 +1,5 @@
 import arcade, arcade.gui, asyncio, pypresence, time, json, copy
-from utils.preload import button_texture, button_hovered_texture, theme_sound
+from utils.preload import button_texture, button_hovered_texture
 from utils.constants import button_style, discord_presence_id
 from utils.utils import FakePyPresence
 
@@ -51,7 +51,7 @@ class Main(arcade.gui.UIView):
     def on_show_view(self):
         super().on_show_view()
 
-        self.title_label = self.box.add(arcade.gui.UILabel(text="Game Of Life", font_name="Protest Strike", font_size=48))
+        self.title_label = self.box.add(arcade.gui.UILabel(text="Game Of Life", font_name="Roboto", font_size=48))
 
         self.play_button = self.box.add(arcade.gui.UITextureButton(text="Play", texture=button_texture, texture_hovered=button_hovered_texture, width=self.window.width / 2, height=150, style=button_style))
         self.play_button.on_click = lambda event: self.play()

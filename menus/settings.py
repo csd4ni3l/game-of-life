@@ -82,7 +82,7 @@ class Settings(arcade.gui.UIView):
         self.value_layout.clear()
 
         for setting in settings[category]:
-            label = arcade.gui.UILabel(text=setting, font_name="Protest Strike", font_size=28, text_color=arcade.color.WHITE )
+            label = arcade.gui.UILabel(text=setting, font_name="Roboto", font_size=28, text_color=arcade.color.WHITE )
             self.key_layout.add(label)
 
             setting_dict = settings[category][setting]
@@ -160,7 +160,10 @@ class Settings(arcade.gui.UIView):
             if self.settings_dict['vsync']:
                 self.window.set_vsync(True)
                 display_mode = self.window.display.get_default_screen().get_mode()
-                refresh_rate = display_mode.rate
+                if display_mode:
+                    refresh_rate = display_mode.rate
+                else:
+                    refresh_rate = 60
                 self.window.set_update_rate(1 / refresh_rate)
                 self.window.set_draw_rate(1 / refresh_rate)
 
@@ -273,7 +276,7 @@ class Settings(arcade.gui.UIView):
         else:
             font_size = 12
 
-        self.credits_label = arcade.gui.UILabel(text=text, text_color=arcade.color.WHITE, font_name="Protest Strike", font_size=font_size, align="center", multiline=True)
+        self.credits_label = arcade.gui.UILabel(text=text, text_color=arcade.color.WHITE, font_name="Roboto", font_size=font_size, align="center", multiline=True)
 
         self.key_layout.add(self.credits_label)
 

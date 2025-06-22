@@ -1,16 +1,18 @@
-import arcade, arcade.gui, random, math, copy, time, json
+import arcade, arcade.gui, random, math, copy, time, json, os
 from utils.constants import COLS, ROWS, CELL_SIZE, SPACING, NEIGHBORS, button_style
 from utils.preload import create_sound, destroy_sound, button_texture, button_hovered_texture
 
 class Game(arcade.gui.UIView):
-    def __init__(self, pypresence_client=None):
+    def __init__(self, pypresence_client=None, generation=None, running=False, cell_grid=None, load_from=None):
         super().__init__()
 
-        self.generation = 0
+        self.generation = generation or 0
         self.population = 0
-        self.running = True
+        self.running = running or False
         self.generation_fps = 10
-
+        self.cell_grid = cell_grid or {}
+        self.sprite_grid = {}
+        self.load_from = load_from
         self.pypresence_generation_count = 0
 
         self.pypresence_client = pypresence_client
@@ -30,18 +32,22 @@ class Game(arcade.gui.UIView):
         self.anchor = self.add_widget(arcade.gui.UIAnchorLayout(size_hint=(1, 1)))
         self.info_box = self.anchor.add(arcade.gui.UIBoxLayout(space_between=5, vertical=False), anchor_x="center", anchor_y="top")
 
-        self.population_label = arcade.gui.UILabel(text="Population: 0", font_name="Protest Strike", font_size=16)
+        self.population_label = arcade.gui.UILabel(text="Population: 0", font_name="Roboto", font_size=16)
         self.info_box.add(self.population_label)
 
-        self.generation_label = arcade.gui.UILabel(text="Generation: 0", font_name="Protest Strike", font_size=16)
+        self.generation_label = arcade.gui.UILabel(text="Generation: 0", font_name="Roboto", font_size=16)
         self.info_box.add(self.generation_label)
 
-        self.fps_label = arcade.gui.UILabel(text="FPS: 10", font_name="Protest Strike", font_size=16)
+        self.fps_label = arcade.gui.UILabel(text="FPS: 10", font_name="Roboto", font_size=16)
         self.info_box.add(self.fps_label)
 
         self.back_button = arcade.gui.UITextureButton(texture=button_texture, texture_hovered=button_hovered_texture, text='<--', style=button_style, width=100, height=50)
-        self.back_button.on_click = lambda e: self.main_exit()
+        self.back_button.on_click = lambda event: self.main_exit()
         self.anchor.add(self.back_button, anchor_x="left", anchor_y="top", align_x=5, align_y=-5)
+
+        self.load_button = arcade.gui.UITextureButton(texture=button_texture, texture_hovered=button_hovered_texture, text="Load", style=button_style, width=200, height=100)
+        self.load_button.on_click = lambda event: self.load()
+        self.anchor.add(self.load_button, anchor_x="left", anchor_y="bottom", align_x=5, align_y=5)
 
         arcade.schedule(self.update_generation, 1 / self.generation_fps)
 
@@ -49,29 +55,40 @@ class Game(arcade.gui.UIView):
         from menus.main import Main
         self.window.show_view(Main(self.pypresence_client))
 
-    def setup_grid(self, randomized=False):
+    def setup_grid(self, load_existing=False, randomized=False):
         self.spritelist.clear()
-
-        self.cell_grid = {}
-        self.sprite_grid = {}
 
         for row in range(ROWS):
             self.cell_grid[row] = {}
             self.sprite_grid[row] = {}
+
+        if self.load_from:
+            loaded_data = []
+            with open(self.load_from, "r") as file:
+                data = file.read().splitlines()
+                for line in data:
+                    if line == "#Life 1.06":
+                        continue
+
+                    x, y = line.split(" ")
+                    x = int(COLS / 2 + int(x))
+                    y = int(ROWS / 2 + int(y))
+                    loaded_data.append((y, x))
+
+        for row in range(ROWS):
             for col in range(COLS):
-                if randomized and random.randint(0, 1) == 1:
-                    cell = arcade.SpriteSolidColor(CELL_SIZE, CELL_SIZE, center_x=self.start_x + col * (CELL_SIZE + SPACING), center_y=self.start_y + row * (CELL_SIZE + SPACING), color=arcade.color.WHITE)
-                    self.cell_grid[row][col] = 1
-                    self.sprite_grid[row][col] = cell
-                    self.spritelist.append(cell)
+                if self.load_from:
+                    self.cell_grid[row][col] = 1 if (row, col) in loaded_data else 0
+                elif not load_existing:
+                    if randomized and random.randint(0, 1):
+                        self.cell_grid[row][col] = 1
+                        self.population += 1
+                        continue
 
-                    self.population += 1
+                    self.cell_grid[row][col] = 0
 
-                    continue
-
-                self.cell_grid[row][col] = 0
                 cell = arcade.SpriteSolidColor(CELL_SIZE, CELL_SIZE, center_x=self.start_x + col * (CELL_SIZE + SPACING), center_y=self.start_y + row * (CELL_SIZE + SPACING), color=arcade.color.WHITE)
-                cell.visible = False
+                cell.visible = self.cell_grid[row][col]
                 self.sprite_grid[row][col] = cell
                 self.spritelist.append(cell)
 
@@ -96,10 +113,10 @@ class Game(arcade.gui.UIView):
                         if neighbor_x == 0 and neighbor_y == 0:
                             continue
 
-                        if grid.get(y + neighbor_y, {}).get(x + neighbor_x) == 1:
+                        if grid.get(y + neighbor_y, {}).get(x + neighbor_x):
                             cell_neighbors += 1
 
-                    if grid[y][x] == 1:
+                    if grid[y][x]:
                         if (cell_neighbors == 2 or cell_neighbors == 3):
                             pass # survives
                         else: # dies
@@ -128,6 +145,10 @@ class Game(arcade.gui.UIView):
 
             self.population_label.text = f"Population: {self.population}"
             self.generation_label.text = f"Generation: {self.generation}"
+
+            self.cell_grid.clear()
+            self.spritelist.clear()
+            self.sprite_grid.clear()
 
             arcade.unschedule(self.update_generation)
             self.setup_grid()
@@ -170,12 +191,16 @@ class Game(arcade.gui.UIView):
             if grid_col < 0 or grid_row < 0 or grid_row >= ROWS or grid_col >= COLS:
                 return
 
-            if self.cell_grid[grid_row][grid_col] == 1:
+            if self.cell_grid[grid_row][grid_col]:
                 self.population -= 1
                 if self.settings_dict.get("sfx", True):
                     destroy_sound.play(volume=self.settings_dict.get("sfx_volume", 50) / 100)
                 self.sprite_grid[grid_row][grid_col].visible = False
                 self.cell_grid[grid_row][grid_col] = 0
+
+    def load(self):
+        from game.file_manager import FileManager
+        self.window.show_view(FileManager(os.path.expanduser("~"), [".txt"], self.pypresence_client, self.generation, self.running, self.cell_grid))
 
     def on_draw(self):
         super().on_draw()
