@@ -110,7 +110,7 @@ class Game(arcade.gui.UIView):
                 self.pypresence_generation_count = 0
                 self.pypresence_client.update(state='In Game', details=f'Generation: {self.generation} Population: {self.population}', start=self.pypresence_client.start_time)
 
-            old_grid = self.cell_grid.copy()
+            old_grid = self.cell_grid
             self.cell_grid = update_generation(self.cell_grid)
 
             changed_rows, changed_cols = np.where(old_grid != self.cell_grid)
