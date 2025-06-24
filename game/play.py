@@ -12,7 +12,7 @@ class Game(arcade.gui.UIView):
         self.generation = generation or 0
         self.population = 0
         self.running = running or False
-        self.cell_grid = cell_grid or 0
+        self.cell_grid = cell_grid
         self.sprite_grid = {}
         self.load_from = load_from
 
@@ -37,7 +37,7 @@ class Game(arcade.gui.UIView):
 
     def on_show_view(self):
         super().on_show_view()
-        self.setup_grid(load_existing=bool(self.cell_grid))
+        self.setup_grid(load_existing=self.cell_grid is not None)
 
         self.anchor = self.add_widget(arcade.gui.UIAnchorLayout(size_hint=(1, 1)))
         self.info_box = self.anchor.add(arcade.gui.UIBoxLayout(space_between=5, vertical=False), anchor_x="center", anchor_y="top")
@@ -113,8 +113,7 @@ class Game(arcade.gui.UIView):
             old_grid = self.cell_grid
             self.cell_grid = update_generation(self.cell_grid)
 
-            changed_rows, changed_cols = np.where(old_grid != self.cell_grid)
-            for row, col in zip(changed_rows, changed_cols):
+            for row, col in np.argwhere(old_grid != self.cell_grid):
                 self.sprite_grid[row][col].visible = bool(self.cell_grid[row, col])
 
     def on_key_press(self, symbol: int, modifiers: int) -> bool | None:
