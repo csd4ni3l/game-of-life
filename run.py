@@ -14,7 +14,7 @@ sys.excepthook = on_exception
 pyglet.resource.path.append(os.getcwd())
 pyglet.font.add_directory('./assets/fonts')
 
-__builtins__.print = lambda *args, **kwargs: logging.debug(" ".join(map(str, args)))
+#__builtins__.print = lambda *args, **kwargs: logging.debug(" ".join(map(str, args)))
 
 if not log_dir in os.listdir():
     os.makedirs(log_dir)

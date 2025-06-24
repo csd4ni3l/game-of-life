@@ -3,11 +3,10 @@ from arcade.types import Color
 from arcade.gui.widgets.buttons import UITextureButtonStyle, UIFlatButtonStyle
 from arcade.gui.widgets.slider import UISliderStyle
 
-COLS = 80
-ROWS = 60
-CELL_SIZE = 10
-SPACING = 2
-NEIGHBORS = [(-1, 0), (-1, 1), (-1, -1), (0, 1), (0, -1), (1, 0), (1, 1), (1, -1)]
+COLS = 128
+ROWS = 96
+CELL_SIZE = 6
+SPACING = 1.75
 
 discord_presence_id = 1363780625928028200
 log_dir = 'logs'

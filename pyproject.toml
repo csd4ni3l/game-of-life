@@ -6,5 +6,6 @@ readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
     "arcade==3.2.0",
+    "numpy>=2.3.1",
     "pypresence>=4.3.0",
 ]

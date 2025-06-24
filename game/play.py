@@ -1,11 +1,12 @@
 import arcade, arcade.gui, random, time, json, os
 from game.file_support import load_file
 from utils.constants import COLS, ROWS, CELL_SIZE, SPACING, button_style
-from utils.preload import create_sound, destroy_sound, button_texture, button_hovered_texture, NEIGHBOUR_MASKS
-from game.game_of_life import get_index, get_bit, get_neighbors, set_bit, unset_bit, create_zeroed_int
+from utils.preload import create_sound, destroy_sound, button_texture, button_hovered_texture
+from game.game_of_life import create_numpy_grid, update_generation
+import numpy as np
 
 class Game(arcade.gui.UIView):
-    def __init__(self, pypresence_client=None, generation=None, running=False, cell_grid=None, generation_fps=10, load_from=None):
+    def __init__(self, pypresence_client=None, generation=None, running=True, cell_grid=None, generation_fps=9999, load_from="/home/csd4ni3l/Downloads/glider_gun.rle"):
         super().__init__()
 
         self.generation = generation or 0
@@ -20,6 +21,7 @@ class Game(arcade.gui.UIView):
         self.generation_time = 1 / self.generation_fps
         self.generation_delta_time = 1 / self.generation_fps
         self.last_generation_update = time.perf_counter()
+        self.last_info_update = time.perf_counter()
 
         self.pypresence_client = pypresence_client
         self.spritelist = arcade.SpriteList()
@@ -74,22 +76,25 @@ class Game(arcade.gui.UIView):
         if self.load_from:
             loaded_data = load_file(COLS / 2, ROWS / 2, self.load_from)
 
-        self.cell_grid = create_zeroed_int(ROWS * COLS)
+        self.cell_grid = create_numpy_grid()
 
         for row in range(ROWS):
             self.sprite_grid[row] = {}
             for col in range(COLS):
                 if self.load_from:
                     if (row, col) in loaded_data:
-                        self.cell_grid = set_bit(self.cell_grid, get_index(row, col))
+                        self.cell_grid[row, col] = 1
                 elif not load_existing:
                     if randomized and random.randint(0, 1):
-                        self.cell_grid = set_bit(self.cell_grid, get_index(row, col))
+                        self.cell_grid[row, col] = 1
                         self.population += 1
                         continue
 
                 cell = arcade.SpriteSolidColor(CELL_SIZE, CELL_SIZE, center_x=self.start_x + col * (CELL_SIZE + SPACING), center_y=self.start_y + row * (CELL_SIZE + SPACING), color=arcade.color.WHITE)
-                cell.visible = get_bit(self.cell_grid, get_index(row, col))
+                
+                if not bool(self.cell_grid[row, col]):
+                    cell.visible = bool(self.cell_grid[row, col])
+
                 self.sprite_grid[row][col] = cell
                 self.spritelist.append(cell)
 
@@ -105,27 +110,12 @@ class Game(arcade.gui.UIView):
                 self.pypresence_generation_count = 0
                 self.pypresence_client.update(state='In Game', details=f'Generation: {self.generation} Population: {self.population}', start=self.pypresence_client.start_time)
 
-            next_grid = self.cell_grid | 0
+            old_grid = self.cell_grid.copy()
+            self.cell_grid = update_generation(self.cell_grid)
 
-            for x in range(0, COLS):
-                for y in range(0, ROWS):
-                    index = get_index(y, x)
-                    cell_neighbors = get_neighbors(self.cell_grid, NEIGHBOUR_MASKS[index])
-
-                    if get_bit(self.cell_grid, index):
-                        if (cell_neighbors == 2 or cell_neighbors == 3):
-                            pass # survives
-                        else: # dies
-                            self.population -= 1
-                            self.sprite_grid[y][x].visible = False
-                            next_grid = unset_bit(next_grid, index)
-
-                    elif cell_neighbors == 3: # newborn
-                        self.population += 1
-                        self.sprite_grid[y][x].visible = True
-                        next_grid = set_bit(next_grid, index)
-
-            self.cell_grid = next_grid
+            changed_rows, changed_cols = np.where(old_grid != self.cell_grid)
+            for row, col in zip(changed_rows, changed_cols):
+                self.sprite_grid[row][col].visible = bool(self.cell_grid[row, col])
 
     def on_key_press(self, symbol: int, modifiers: int) -> bool | None:
         super().on_key_press(symbol, modifiers)
@@ -150,9 +140,12 @@ class Game(arcade.gui.UIView):
     def on_update(self, delta_time):
         super().on_update(delta_time)
         
-        self.actual_fps_label.text = f"Actual FPS: {round(1 / self.generation_delta_time, 2)}"
-        self.population_label.text = f"Population: {self.population}"
-        self.generation_label.text = f"Generation: {self.generation}"
+        if time.perf_counter() - self.last_info_update >= 0.5:
+            self.last_info_update = time.perf_counter()
+            self.actual_fps_label.text = f"Actual FPS: {round(1 / self.generation_delta_time, 2)}"
+            if not self.population < 0: # generation might be faster than 60 FPS, leading to minus population counts.
+                self.population_label.text = f"Population: {self.population}"
+            self.generation_label.text = f"Generation: {self.generation}"
 
         if self.window.keyboard[arcade.key.UP] or self.window.keyboard[arcade.key.DOWN]: # type: ignore
             self.generation_fps += 1 if self.window.keyboard[arcade.key.UP] else -1 # type: ignore
@@ -173,9 +166,7 @@ class Game(arcade.gui.UIView):
             if grid_col < 0 or grid_row < 0 or grid_row >= ROWS or grid_col >= COLS:
                 return
             
-            index = get_index(grid_row, grid_col)
-
-            if not get_bit(self.cell_grid, index):
+            if not self.cell_grid[grid_row, grid_col]:
                 self.population += 1
 
                 if time.perf_counter() - self.last_create_sound >= 0.05:
@@ -184,7 +175,7 @@ class Game(arcade.gui.UIView):
                         create_sound.play(volume=self.settings_dict.get("sfx_volume", 50) / 100)
 
                 self.sprite_grid[grid_row][grid_col].visible = True
-                self.cell_grid = set_bit(self.cell_grid, index)
+                self.cell_grid[grid_row, grid_col] = 1
 
         elif self.window.mouse[arcade.MOUSE_BUTTON_RIGHT]: # type: ignore
             grid_col = int((self.window.mouse.data["x"] - self.start_x + (CELL_SIZE / 2)) // (CELL_SIZE + SPACING)) # type: ignore
@@ -193,14 +184,12 @@ class Game(arcade.gui.UIView):
             if grid_col < 0 or grid_row < 0 or grid_row >= ROWS or grid_col >= COLS:
                 return
 
-            index = get_index(grid_row, grid_col)
-
-            if get_bit(self.cell_grid, index):
+            if self.cell_grid[grid_row, grid_col]:
                 self.population -= 1
                 if self.settings_dict.get("sfx", True):
                     destroy_sound.play(volume=self.settings_dict.get("sfx_volume", 50) / 100)
                 self.sprite_grid[grid_row][grid_col].visible = False
-                self.cell_grid = unset_bit(self.cell_grid, index)
+                self.cell_grid[grid_row, grid_col] = 0
 
     def load(self):
         arcade.unschedule(self.update_generation)
