@@ -6,7 +6,7 @@ from game.game_of_life import create_numpy_grid, update_generation
 import numpy as np
 
 class Game(arcade.gui.UIView):
-    def __init__(self, pypresence_client=None, generation=None, running=False, cell_grid=None, generation_fps=10, load_from=None):
+    def __init__(self, pypresence_client=None, generation=None, running=False, cell_grid=None, gps=10, load_from=None):
         super().__init__()
 
         self.generation = generation or 0
@@ -17,9 +17,9 @@ class Game(arcade.gui.UIView):
         self.load_from = load_from
 
         self.pypresence_generation_count = 0
-        self.generation_fps = generation_fps
-        self.generation_time = 1 / self.generation_fps
-        self.generation_delta_time = 1 / self.generation_fps
+        self.gps = gps
+        self.generation_time = 1 / self.gps
+        self.generation_delta_time = 1 / self.gps
         self.last_generation_update = time.perf_counter()
         self.last_info_update = time.perf_counter()
 
@@ -33,7 +33,7 @@ class Game(arcade.gui.UIView):
         with open("settings.json", "r") as file:
             self.settings_dict = json.load(file)
 
-        arcade.schedule(self.update_generation, 1 / self.generation_fps)
+        arcade.schedule(self.update_generation, 1 / self.gps)
 
     def on_show_view(self):
         super().on_show_view()
@@ -48,10 +48,10 @@ class Game(arcade.gui.UIView):
         self.generation_label = arcade.gui.UILabel(text=f"Generation: {self.generation}", font_name="Roboto", font_size=16)
         self.info_box.add(self.generation_label)
 
-        self.fps_label = arcade.gui.UILabel(text=f"FPS: {self.generation_fps}", font_name="Roboto", font_size=16)
+        self.fps_label = arcade.gui.UILabel(text=f"Generations/second: {self.gps}", font_name="Roboto", font_size=16)
         self.info_box.add(self.fps_label)
 
-        self.actual_fps_label = arcade.gui.UILabel(text=f"Actual FPS: 0", font_name="Roboto", font_size=16)
+        self.actual_fps_label = arcade.gui.UILabel(text=f"Actual generations/second: 0", font_name="Roboto", font_size=16)
         self.info_box.add(self.actual_fps_label)
 
         self.back_button = arcade.gui.UITextureButton(texture=button_texture, texture_hovered=button_hovered_texture, text='<--', style=button_style, width=100, height=50)
@@ -87,8 +87,6 @@ class Game(arcade.gui.UIView):
                 elif not load_existing:
                     if randomized and random.randint(0, 1):
                         self.cell_grid[row, col] = 1
-                        self.population += 1
-                        continue
 
                 cell = arcade.SpriteSolidColor(CELL_SIZE, CELL_SIZE, center_x=self.start_x + col * (CELL_SIZE + SPACING), center_y=self.start_y + row * (CELL_SIZE + SPACING), color=arcade.color.WHITE)
                 
@@ -106,7 +104,7 @@ class Game(arcade.gui.UIView):
 
             self.pypresence_generation_count += 1
 
-            if self.pypresence_generation_count == self.generation_fps * 3:
+            if self.pypresence_generation_count == self.gps * 3:
                 self.pypresence_generation_count = 0
                 self.pypresence_client.update(state='In Game', details=f'Generation: {self.generation} Population: {self.population}', start=self.pypresence_client.start_time)
 
@@ -134,26 +132,40 @@ class Game(arcade.gui.UIView):
 
             arcade.unschedule(self.update_generation)
             self.setup_grid()
-            arcade.schedule(self.update_generation, 1 / self.generation_fps)
+            arcade.schedule(self.update_generation, 1 / self.gps)
+        elif symbol == arcade.key.R:
+            self.population = 0
+            self.generation = 0
+
+            self.population_label.text = f"Population: {self.population}"
+            self.generation_label.text = f"Generation: {self.generation}"
+            
+            self.cell_grid = 0
+            self.spritelist.clear()
+            self.sprite_grid.clear()
+
+            arcade.unschedule(self.update_generation)
+            self.setup_grid(randomized=True)
+            arcade.schedule(self.update_generation, 1 / self.gps)            
 
     def on_update(self, delta_time):
         super().on_update(delta_time)
         
         if time.perf_counter() - self.last_info_update >= 0.5:
             self.last_info_update = time.perf_counter()
-            self.actual_fps_label.text = f"Actual FPS: {round(1 / self.generation_delta_time, 2)}"
+            self.actual_fps_label.text = f"Actual generations/second: {round(1 / self.generation_delta_time, 2)}"
             if not self.population < 0: # generation might be faster than 60 FPS, leading to minus population counts.
                 self.population_label.text = f"Population: {self.population}"
             self.generation_label.text = f"Generation: {self.generation}"
 
         if self.window.keyboard[arcade.key.UP] or self.window.keyboard[arcade.key.DOWN]: # type: ignore
-            self.generation_fps += 1 if self.window.keyboard[arcade.key.UP] else -1 # type: ignore
+            self.gps += 1 if self.window.keyboard[arcade.key.UP] else -1 # type: ignore
             
-            if self.generation_fps < 1:
-                self.generation_fps = 1
+            if self.gps < 1:
+                self.gps = 1
 
-            self.generation_time = 1 / self.generation_fps
-            self.fps_label.text = f"FPS: {self.generation_fps}"
+            self.generation_time = 1 / self.gps
+            self.fps_label.text = f"Generations/second: {self.gps}"
 
             arcade.unschedule(self.update_generation)
             arcade.schedule(self.update_generation, self.generation_time)
@@ -193,12 +205,12 @@ class Game(arcade.gui.UIView):
     def load(self):
         arcade.unschedule(self.update_generation)
         from game.file_manager import FileManager
-        self.window.show_view(FileManager(os.path.expanduser("~"), [".txt", ".rle"], False, self.pypresence_client, self.generation, self.running, self.cell_grid, self.generation_fps))
+        self.window.show_view(FileManager(os.path.expanduser("~"), [".txt", ".rle"], False, self.pypresence_client, self.generation, self.running, self.cell_grid, self.gps))
 
     def save(self):
         arcade.unschedule(self.update_generation)
         from game.file_manager import FileManager
-        self.window.show_view(FileManager(os.path.expanduser("~"), [".txt", ".rle"], True, self.pypresence_client, self.generation, self.running, self.cell_grid, self.generation_fps))
+        self.window.show_view(FileManager(os.path.expanduser("~"), [".txt", ".rle"], True, self.pypresence_client, self.generation, self.running, self.cell_grid, self.gps))
 
     def on_draw(self):
         super().on_draw()

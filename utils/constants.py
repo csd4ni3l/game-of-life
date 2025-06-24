@@ -6,7 +6,7 @@ from arcade.gui.widgets.slider import UISliderStyle
 COLS = 128
 ROWS = 96
 CELL_SIZE = 6
-SPACING = 1.75
+SPACING = 1
 
 discord_presence_id = 1363780625928028200
 log_dir = 'logs'
