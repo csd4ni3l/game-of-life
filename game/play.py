@@ -6,7 +6,7 @@ from game.game_of_life import create_numpy_grid, update_generation
 import numpy as np
 
 class Game(arcade.gui.UIView):
-    def __init__(self, pypresence_client=None, generation=None, running=False, cell_grid=None, generation_fps=0, load_from=None):
+    def __init__(self, pypresence_client=None, generation=None, running=False, cell_grid=None, generation_fps=10, load_from=None):
         super().__init__()
 
         self.generation = generation or 0
