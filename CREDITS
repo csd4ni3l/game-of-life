@@ -11,3 +11,4 @@ https://pyglet.readthedocs.io/en/latest/
 
 Thanks to the following other libraries used in this game:
 pypresence - https://github.com/qwertyquerty/pypresence - Used for Discord Rich Presence
+numpy - https://github.com/numpy/numpy - Used for vector maths to make it fast
