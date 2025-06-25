@@ -1,10 +1,11 @@
 import arcade, arcade.gui, os, time
 
 from game.file_support import save_file
-from utils.constants import button_style, dropdown_style
+from utils.constants import button_style
 from utils.preload import button_texture, button_hovered_texture
 
 from arcade.gui.experimental.scroll_area import UIScrollArea, UIScrollBar
+from arcade.gui.experimental.focus import UIFocusGroup
 
 class FileManager(arcade.gui.UIView):
     def __init__(self, start_directory, allowed_extensions, save=False, *args):
@@ -17,7 +18,7 @@ class FileManager(arcade.gui.UIView):
         self.args = args
         self.save = save
 
-        self.anchor = self.ui.add(arcade.gui.UIAnchorLayout(size_hint=(1, 1)))
+        self.anchor = self.add_widget(UIFocusGroup(size_hint=(1, 1)))
         self.box = self.anchor.add(arcade.gui.UIBoxLayout(size_hint=(0.7, 0.7)), anchor_x="center", anchor_y="center")
 
         self.content_cache = {}
@@ -47,6 +48,8 @@ class FileManager(arcade.gui.UIView):
             # self.save_file_type_dropdown = self.anchor.add(arcade.gui.UIDropdown(options=["life_5", "life_6", "rle"], default="rle", width=self.window.width / 5, height=self.window.height / 15, primary_style=dropdown_style, dropdown_style=dropdown_style, active_style=dropdown_style), anchor_x="center", anchor_y="bottom", align_y=20, align_x=self.window.width / 7)
             self.save_button = self.anchor.add(arcade.gui.UITextureButton(texture=button_texture, texture_hovered=button_hovered_texture, text='Save', style=button_style, width=200, height=100), anchor_x="right", anchor_y="bottom", align_x=-35, align_y=5)
             self.save_button.on_click = lambda event: self.save_content()
+        
+        self.anchor.detect_focusable_widgets()
 
         self.show_directory()
 
@@ -118,11 +121,25 @@ class FileManager(arcade.gui.UIView):
             else:
                 self.file_buttons[-1].on_click = lambda event, file=f"{self.current_directory}/{file}": self.submit(file)
 
+        self.anchor.detect_focusable_widgets()
+
+    def on_mouse_press(self, x, y, button, modifiers):
+       if button == arcade.MOUSE_BUTTON_RIGHT:
+           self.change_directory(os.path.dirname(self.current_directory))
+
+    def on_button_press(self, controller, name):
+        if name == "b":
+            self.change_directory(os.path.dirname(self.current_directory))
+        elif name == "start":
+            self.main_exit()
+    
     def on_key_press(self, symbol: int, modifiers: int) -> bool | None:
-        super().on_key_press(symbol, modifiers)
         if symbol == arcade.key.ESCAPE:
-            from game.play import Game
-            self.window.show_view(Game(*self.args))
+            self.main_exit()
+    
+    def main_exit(self):
+        from game.play import Game
+        self.window.show_view(Game(*self.args))
 
     def change_directory(self, directory):
         if directory.startswith("//"): # Fix / paths
@@ -131,7 +148,3 @@ class FileManager(arcade.gui.UIView):
         self.current_directory = directory
 
         self.show_directory()
-
-    def on_mouse_press(self, x, y, button, modifiers):
-       if button == arcade.MOUSE_BUTTON_RIGHT:
-           self.change_directory(os.path.dirname(self.current_directory))

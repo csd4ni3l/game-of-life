@@ -7,14 +7,15 @@ import logging, datetime, os, json, sys, arcade
 from utils.utils import get_closest_resolution, print_debug_info, on_exception
 from utils.constants import log_dir, menu_background_color
 from menus.main import Main
-from utils.preload import theme_sound # type: ignore # needed for preload
+from utils.preload import theme_sound # needed for preload
+from arcade.experimental.controller_window import ControllerWindow
 
 sys.excepthook = on_exception
 
 pyglet.resource.path.append(os.getcwd())
 pyglet.font.add_directory('./assets/fonts')
 
-#__builtins__.print = lambda *args, **kwargs: logging.debug(" ".join(map(str, args)))
+__builtins__.print = lambda *args, **kwargs: logging.debug(" ".join(map(str, args)))
 
 if not log_dir in os.listdir():
     os.makedirs(log_dir)
@@ -72,7 +73,7 @@ else:
 if settings.get("music", True):
     theme_sound.play(volume=settings.get("music_volume", 50) / 100, loop=True)
 
-window = arcade.Window(width=resolution[0], height=resolution[1], title='Game Of Life', samples=antialiasing, antialiasing=antialiasing > 0, fullscreen=fullscreen, vsync=vsync, resizable=False, style=style)
+window = ControllerWindow(width=resolution[0], height=resolution[1], title='Game Of Life', samples=antialiasing, antialiasing=antialiasing > 0, fullscreen=fullscreen, vsync=vsync, resizable=False, style=style)
 
 if vsync:
     window.set_vsync(True)

@@ -1,4 +1,4 @@
-import copy, pypresence, json, os
+import copy, pypresence, json
 
 import arcade, arcade.gui
 
@@ -6,7 +6,6 @@ from utils.constants import button_style, dropdown_style, slider_style, settings
 from utils.utils import FakePyPresence
 from utils.preload import button_texture, button_hovered_texture, theme_sound
 
-from arcade.gui import UIBoxLayout, UIAnchorLayout
 from arcade.gui.experimental.focus import UIFocusGroup
 
 class Settings(arcade.gui.UIView):
@@ -30,16 +29,16 @@ class Settings(arcade.gui.UIView):
         self.modified_settings = {}
 
     def create_layouts(self):
-        self.anchor = self.add_widget(UIAnchorLayout(size_hint=(1, 1)))
+        self.anchor = self.add_widget(UIFocusGroup(size_hint=(1, 1)))
 
-        self.box = UIBoxLayout(space_between=50, align="center", vertical=False)
+        self.box = arcade.gui.UIBoxLayout(space_between=50, align="center", vertical=False)
         self.anchor.add(self.box, anchor_x="center", anchor_y="top", align_x=10, align_y=-75)
 
-        self.top_box = UIBoxLayout(space_between=self.window.width / 160, vertical=False)
+        self.top_box = arcade.gui.UIBoxLayout(space_between=self.window.width / 160, vertical=False)
         self.anchor.add(self.top_box, anchor_x="left", anchor_y="top", align_x=10, align_y=-10)
 
-        self.key_layout = self.box.add(UIBoxLayout(space_between=20, align='left'))
-        self.value_layout = self.box.add(UIBoxLayout(space_between=13, align='left'))
+        self.key_layout = self.box.add(arcade.gui.UIBoxLayout(space_between=20, align='left'))
+        self.value_layout = self.box.add(arcade.gui.UIBoxLayout(space_between=13, align='left'))
 
     def on_show_view(self):
         super().on_show_view()
@@ -66,6 +65,8 @@ class Settings(arcade.gui.UIView):
                 category_button.on_click = lambda e: self.credits()
 
             self.top_box.add(category_button)
+
+        self.anchor.detect_focusable_widgets()
 
     def display_category(self, category):
         if hasattr(self, 'apply_button'):
@@ -134,6 +135,8 @@ class Settings(arcade.gui.UIView):
         self.apply_button = arcade.gui.UITextureButton(texture=button_texture, texture_hovered=button_hovered_texture, text='Apply', style=button_style, width=200, height=100)
         self.apply_button.on_click = lambda e: self.apply_settings()
         self.anchor.add(self.apply_button, anchor_x="right", anchor_y="bottom", align_x=-10, align_y=10)
+
+        self.anchor.detect_focusable_widgets()
 
     def apply_settings(self):
         for config_key, value in self.modified_settings.items():
@@ -218,7 +221,6 @@ class Settings(arcade.gui.UIView):
             file.write(json.dumps(self.settings_dict, indent=4))
 
     def update(self, setting=None, button_state=None, setting_type="bool"):
-        setting_dict = settings[self.current_category][setting]
         config_key = settings[self.current_category][setting]["config_key"]
 
         if setting_type == "option":

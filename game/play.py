@@ -1,9 +1,10 @@
-import arcade, arcade.gui, random, time, json, os
-from game.file_support import load_file
+import arcade, arcade.gui, random, time, json, os, numpy as np
+
 from utils.constants import COLS, ROWS, CELL_SIZE, SPACING, button_style
-from utils.preload import create_sound, destroy_sound, button_texture, button_hovered_texture
+from utils.preload import create_sound, destroy_sound, button_texture, button_hovered_texture, cursor_texture
+
 from game.game_of_life import create_numpy_grid, update_generation
-import numpy as np
+from game.file_support import load_file
 
 class Game(arcade.gui.UIView):
     def __init__(self, pypresence_client=None, generation=None, running=False, cell_grid=None, gps=10, load_from=None):
@@ -23,6 +24,10 @@ class Game(arcade.gui.UIView):
         self.last_generation_update = time.perf_counter()
         self.last_info_update = time.perf_counter()
 
+        self.has_controller = False
+        self.controller_a_press = False
+        self.controller_b_press = False
+
         self.pypresence_client = pypresence_client
         self.spritelist = arcade.SpriteList()
         self.last_create_sound = time.perf_counter()
@@ -37,6 +42,7 @@ class Game(arcade.gui.UIView):
 
     def on_show_view(self):
         super().on_show_view()
+
         self.setup_grid(load_existing=self.cell_grid is not None)
 
         self.anchor = self.add_widget(arcade.gui.UIAnchorLayout(size_hint=(1, 1)))
@@ -66,9 +72,43 @@ class Game(arcade.gui.UIView):
         self.save_button.on_click = lambda event: self.save()
         self.anchor.add(self.save_button, anchor_x="right", anchor_y="bottom", align_x=-5, align_y=5)
 
+        if self.window.get_controllers():
+            self.cursor_sprite = arcade.Sprite(cursor_texture)
+            self.spritelist.append(self.cursor_sprite)
+            self.has_controller = True
+
     def main_exit(self):
         from menus.main import Main
         self.window.show_view(Main(self.pypresence_client))
+
+    def on_trigger_motion(self, controller, name, value):
+        if not value >= 0.9:
+            return
+        
+        if name == "lefttrigger":
+            self.load()
+        elif name == "righttrigger":
+            self.save()
+
+    def on_stick_motion(self, controller, name, value):
+        if name == "leftstick":
+            value *= 3
+            self.cursor_sprite.center_x += value.x
+            self.cursor_sprite.center_y += value.y
+
+    def on_button_press(self, controller, name):
+        if name == "a":
+            self.controller_a_press = True
+        elif name == "b":
+            self.controller_b_press = True
+        elif name == "start":
+            self.main_exit()
+    
+    def on_button_release(self, controller, name):
+        if name == "a":
+            self.controller_a_press = False
+        elif name == "b":
+            self.controller_b_press = False
 
     def setup_grid(self, load_existing=False, randomized=False):
         self.spritelist.clear()
@@ -91,7 +131,7 @@ class Game(arcade.gui.UIView):
                 cell = arcade.SpriteSolidColor(CELL_SIZE, CELL_SIZE, center_x=self.start_x + col * (CELL_SIZE + SPACING), center_y=self.start_y + row * (CELL_SIZE + SPACING), color=arcade.color.WHITE)
                 
                 if not bool(self.cell_grid[row, col]):
-                    cell.visible = bool(self.cell_grid[row, col])
+                    cell.visible = False
 
                 self.sprite_grid[row][col] = cell
                 self.spritelist.append(cell)
@@ -170,9 +210,11 @@ class Game(arcade.gui.UIView):
             arcade.unschedule(self.update_generation)
             arcade.schedule(self.update_generation, self.generation_time)
 
-        if self.window.mouse[arcade.MOUSE_BUTTON_LEFT]: # type: ignore
-            grid_col = int((self.window.mouse.data["x"] - self.start_x + (CELL_SIZE / 2)) // (CELL_SIZE + SPACING)) # type: ignore
-            grid_row = int((self.window.mouse.data["y"] - self.start_y + (CELL_SIZE / 2)) // (CELL_SIZE + SPACING)) # type: ignore
+        if self.window.mouse[arcade.MOUSE_BUTTON_LEFT] or self.controller_a_press: # type: ignore
+            x = self.window.mouse.data["x"] if not self.controller_a_press else self.cursor_sprite.left
+            y = self.window.mouse.data["y"] if not self.controller_a_press else self.cursor_sprite.top       
+            grid_col = int((x - self.start_x + (CELL_SIZE / 2)) // (CELL_SIZE + SPACING)) # type: ignore
+            grid_row = int((y - self.start_y + (CELL_SIZE / 2)) // (CELL_SIZE + SPACING)) # type: ignore
 
             if grid_col < 0 or grid_row < 0 or grid_row >= ROWS or grid_col >= COLS:
                 return
@@ -188,9 +230,11 @@ class Game(arcade.gui.UIView):
                 self.sprite_grid[grid_row][grid_col].visible = True
                 self.cell_grid[grid_row, grid_col] = 1
 
-        elif self.window.mouse[arcade.MOUSE_BUTTON_RIGHT]: # type: ignore
-            grid_col = int((self.window.mouse.data["x"] - self.start_x + (CELL_SIZE / 2)) // (CELL_SIZE + SPACING)) # type: ignore
-            grid_row = int((self.window.mouse.data["y"] - self.start_y + (CELL_SIZE / 2)) // (CELL_SIZE + SPACING)) # type: ignore
+        elif self.window.mouse[arcade.MOUSE_BUTTON_RIGHT] or self.controller_b_press: # type: ignore
+            x = self.window.mouse.data["x"] if not self.controller_b_press else self.cursor_sprite.left
+            y = self.window.mouse.data["y"] if not self.controller_b_press else self.cursor_sprite.top                        
+            grid_col = int((x - self.start_x + (CELL_SIZE / 2)) // (CELL_SIZE + SPACING)) # type: ignore
+            grid_row = int((y - self.start_y + (CELL_SIZE / 2)) // (CELL_SIZE + SPACING)) # type: ignore
 
             if grid_col < 0 or grid_row < 0 or grid_row >= ROWS or grid_col >= COLS:
                 return
