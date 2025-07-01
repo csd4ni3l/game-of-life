@@ -1,8 +1,7 @@
 import logging, arcade, arcade.gui, sys, traceback
 
 from utils.constants import menu_background_color
-
-import pyglet.info, pyglet.event
+import pyglet
 
 def dump_platform():
     import platform
