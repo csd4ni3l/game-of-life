@@ -1,7 +1,7 @@
-This is a Conway's Game Of life clone created using Python, Arcade & Numpy.
+This is a Conway's Game Of life clone created using Python, Arcade, Pyglet and compute shaders.
 
 Features:
-- Really fast because of Numpy, using vectorized operations
+- Really fast because computation happens on the GPU and data grid stays within GPU
 - .rle, Life 1.05, Life 1.06 loading support
 - .rle export support
 - Discord RPC

@@ -1,11 +1,10 @@
 [project]
 name = "game-of-life"
 version = "0.1.0"
-description = "Game of life recreated with Python and the Arcade and pyglet modules."
+description = "Game Of Life recreated with Python, Arcade, pyglet and compute shaders."
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
     "arcade==3.2.0",
-    "numpy>=2.3.1",
     "pypresence>=4.3.0",
 ]

@@ -1,39 +1,43 @@
-import arcade, arcade.gui, random, time, json, os, numpy as np
+import arcade, arcade.gui, pyglet, time, json, os
 
-from utils.constants import COLS, ROWS, CELL_SIZE, SPACING, button_style
+from pyglet.gl import glBindBufferBase, GL_SHADER_STORAGE_BUFFER
+
+from array import array
+
+from utils.constants import COLS, ROWS, button_style
 from utils.preload import create_sound, destroy_sound, button_texture, button_hovered_texture, cursor_texture
 
-from game.game_of_life import create_numpy_grid, update_generation
+from game.game_of_life import create_shader
 from game.file_support import load_file
 
 class Game(arcade.gui.UIView):
-    def __init__(self, pypresence_client=None, generation=None, running=False, cell_grid=None, gps=10, load_from=None):
+    def __init__(self, pypresence_client=None, generation=None, running=False, cell_grid=None, gps=60, load_from=None):
         super().__init__()
 
         self.generation = generation or 0
         self.population = 0
         self.running = running or False
         self.cell_grid = cell_grid
-        self.sprite_grid = {}
         self.load_from = load_from
 
         self.pypresence_generation_count = 0
         self.gps = gps
         self.generation_time = 1 / self.gps
         self.generation_delta_time = 1 / self.gps
+
         self.last_generation_update = time.perf_counter()
         self.last_info_update = time.perf_counter()
+        self.last_create_sound = time.perf_counter()
 
         self.has_controller = False
         self.controller_a_press = False
         self.controller_b_press = False
 
-        self.pypresence_client = pypresence_client
-        self.spritelist = arcade.SpriteList()
-        self.last_create_sound = time.perf_counter()
+        self.mouse_row = 0
+        self.mouse_col = 0
+        self.mouse_interaction = -1
 
-        self.start_x = self.window.width / 2 - ((COLS * (CELL_SIZE + SPACING)) / 2)
-        self.start_y = self.window.height / 2 - ((ROWS * (CELL_SIZE + SPACING)) / 2)
+        self.pypresence_client = pypresence_client
 
         with open("settings.json", "r") as file:
             self.settings_dict = json.load(file)
@@ -43,7 +47,7 @@ class Game(arcade.gui.UIView):
     def on_show_view(self):
         super().on_show_view()
 
-        self.setup_grid(load_existing=self.cell_grid is not None)
+        self.setup_game(load_existing=self.cell_grid is not None)
 
         self.anchor = self.add_widget(arcade.gui.UIAnchorLayout(size_hint=(1, 1)))
         self.info_box = self.anchor.add(arcade.gui.UIBoxLayout(space_between=5, vertical=False), anchor_x="center", anchor_y="top")
@@ -73,11 +77,20 @@ class Game(arcade.gui.UIView):
         self.anchor.add(self.save_button, anchor_x="right", anchor_y="bottom", align_x=-5, align_y=5)
 
         if self.window.get_controllers():
+            self.spritelist = arcade.SpriteList()
             self.cursor_sprite = arcade.Sprite(cursor_texture)
             self.spritelist.append(self.cursor_sprite)
+
             self.has_controller = True
+            self.controller = self.window.get_controllers()[0]
 
     def main_exit(self):
+        arcade.unschedule(self.update_generation)
+        
+        self.shader_program.delete()
+        self.ssbo_in.delete()
+        self.ssbo_out.delete()
+
         from menus.main import Main
         self.window.show_view(Main(self.pypresence_client))
 
@@ -97,62 +110,72 @@ class Game(arcade.gui.UIView):
             self.cursor_sprite.center_y += value.y
 
     def on_button_press(self, controller, name):
-        if name == "a":
-            self.controller_a_press = True
-        elif name == "b":
-            self.controller_b_press = True
-        elif name == "start":
+        if name == "start":
             self.main_exit()
     
     def on_button_release(self, controller, name):
-        if name == "a":
-            self.controller_a_press = False
-        elif name == "b":
-            self.controller_b_press = False
+        if name == "a" or name == "b":
+            self.mouse_interaction = -1
 
-    def setup_grid(self, load_existing=False, randomized=False):
-        self.spritelist.clear()
+    def setup_game(self, load_existing=False, randomized=False):
+        self.grid = array('i', [0] * ROWS * COLS)
 
         if self.load_from:
-            loaded_data = load_file(COLS / 2, ROWS / 2, self.load_from)
+            loaded_positions = load_file(COLS / 2, ROWS / 2, self.load_from)
+            
+            for row, col in loaded_positions:
+                index = (row * COLS) + col
+                self.grid[index] = 1
 
-        self.cell_grid = create_numpy_grid()
+        self.shader_program, self.game_of_life_image, self.ssbo_in, self.ssbo_out = create_shader(self.grid)
 
-        for row in range(ROWS):
-            self.sprite_grid[row] = {}
-            for col in range(COLS):
-                if self.load_from:
-                    if (row, col) in loaded_data:
-                        self.cell_grid[row, col] = 1
-                elif not load_existing:
-                    if randomized and random.randint(0, 1):
-                        self.cell_grid[row, col] = 1
+        self.ssbo_in.set_data(self.grid.tobytes())
 
-                cell = arcade.SpriteSolidColor(CELL_SIZE, CELL_SIZE, center_x=self.start_x + col * (CELL_SIZE + SPACING), center_y=self.start_y + row * (CELL_SIZE + SPACING), color=arcade.color.WHITE)
-                
-                if not bool(self.cell_grid[row, col]):
-                    cell.visible = False
+        self.image_sprite = pyglet.sprite.Sprite(img=self.game_of_life_image)
+        
+        scale_x = (self.window.width * 0.75) / self.image_sprite.width
+        scale_y = (self.window.height * 0.75) / self.image_sprite.height
+        rendered_width = self.image_sprite.width * scale_x
+        rendered_height = self.image_sprite.height * scale_y
 
-                self.sprite_grid[row][col] = cell
-                self.spritelist.append(cell)
+        self.image_sprite.scale_x = scale_x 
+        self.image_sprite.scale_y = scale_y
+        self.image_sprite.x = (self.window.width / 2) - (rendered_width / 2)
+        self.image_sprite.y = (self.window.height / 2) - (rendered_height / 2)
+
+        self.grid_outline = pyglet.shapes.BorderedRectangle(
+            x=self.image_sprite.x - 3,
+            y=self.image_sprite.y - 3,
+            width=rendered_width + 5,
+            height=rendered_height + 5,
+            color=(47, 79, 79, 255),
+            border_color=(255, 255, 255, 255),
+            border=5
+        )
 
     def update_generation(self, delta_time):
-        self.generation_delta_time = delta_time
-        
         if self.running:
+            self.generation_delta_time = delta_time
             self.generation += 1
 
-            self.pypresence_generation_count += 1
+        self.pypresence_generation_count += 1
 
-            if self.pypresence_generation_count == self.gps * 3:
-                self.pypresence_generation_count = 0
-                self.pypresence_client.update(state='In Game', details=f'Generation: {self.generation} Population: {self.population}', start=self.pypresence_client.start_time)
+        if self.pypresence_generation_count == self.gps * 3:
+            self.pypresence_generation_count = 0
+            self.pypresence_client.update(state='In Game', details=f'Generation: {self.generation} Population: {self.population}', start=self.pypresence_client.start_time)
 
-            old_grid = self.cell_grid
-            self.cell_grid = update_generation(self.cell_grid)
+        with self.shader_program:
+            self.shader_program['mouse_row'] = self.mouse_row
+            self.shader_program['mouse_col'] = self.mouse_col
+            self.shader_program['mouse_interaction'] = self.mouse_interaction
+            self.shader_program['rows'] = ROWS
+            self.shader_program['cols'] = COLS
+            self.shader_program['running'] = self.running
+            self.shader_program.dispatch(self.game_of_life_image.width, self.game_of_life_image.height, 1, barrier=pyglet.gl.GL_ALL_BARRIER_BITS)
 
-            for row, col in np.argwhere(old_grid != self.cell_grid):
-                self.sprite_grid[row][col].visible = bool(self.cell_grid[row, col])
+        self.ssbo_in, self.ssbo_out = self.ssbo_out, self.ssbo_in
+        glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 3, self.ssbo_in.id)
+        glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 4, self.ssbo_out.id)
 
     def on_key_press(self, symbol: int, modifiers: int) -> bool | None:
         super().on_key_press(symbol, modifiers)
@@ -166,12 +189,10 @@ class Game(arcade.gui.UIView):
             self.population_label.text = f"Population: {self.population}"
             self.generation_label.text = f"Generation: {self.generation}"
             
-            self.cell_grid = 0
-            self.spritelist.clear()
-            self.sprite_grid.clear()
+            self.grid = array('i', [0] * ROWS * COLS)
 
             arcade.unschedule(self.update_generation)
-            self.setup_grid()
+            self.setup_game()
             arcade.schedule(self.update_generation, 1 / self.gps)
         elif symbol == arcade.key.R:
             self.population = 0
@@ -180,12 +201,10 @@ class Game(arcade.gui.UIView):
             self.population_label.text = f"Population: {self.population}"
             self.generation_label.text = f"Generation: {self.generation}"
             
-            self.cell_grid = 0
-            self.spritelist.clear()
-            self.sprite_grid.clear()
+            self.grid = array('i', [0] * ROWS * COLS)
 
             arcade.unschedule(self.update_generation)
-            self.setup_grid(randomized=True)
+            self.setup_game(randomized=True)
             arcade.schedule(self.update_generation, 1 / self.gps)            
 
     def on_update(self, delta_time):
@@ -210,41 +229,36 @@ class Game(arcade.gui.UIView):
             arcade.unschedule(self.update_generation)
             arcade.schedule(self.update_generation, self.generation_time)
 
-        if self.window.mouse[arcade.MOUSE_BUTTON_LEFT] or self.controller_a_press: # type: ignore
-            x = self.window.mouse.data["x"] if not self.controller_a_press else self.cursor_sprite.left
-            y = self.window.mouse.data["y"] if not self.controller_a_press else self.cursor_sprite.top       
-            grid_col = int((x - self.start_x + (CELL_SIZE / 2)) // (CELL_SIZE + SPACING)) # type: ignore
-            grid_row = int((y - self.start_y + (CELL_SIZE / 2)) // (CELL_SIZE + SPACING)) # type: ignore
+        if self.window.mouse[arcade.MOUSE_BUTTON_LEFT] or (self.has_controller and self.controller.a):
+            self.mouse_interaction = 1
+            self.population += 1
 
-            if grid_col < 0 or grid_row < 0 or grid_row >= ROWS or grid_col >= COLS:
-                return
-            
-            if not self.cell_grid[grid_row, grid_col]:
-                self.population += 1
-
-                if time.perf_counter() - self.last_create_sound >= 0.05:
-                    self.last_create_sound = time.perf_counter()
-                    if self.settings_dict.get("sfx", True):
-                        create_sound.play(volume=self.settings_dict.get("sfx_volume", 50) / 100)
-
-                self.sprite_grid[grid_row][grid_col].visible = True
-                self.cell_grid[grid_row, grid_col] = 1
-
-        elif self.window.mouse[arcade.MOUSE_BUTTON_RIGHT] or self.controller_b_press: # type: ignore
-            x = self.window.mouse.data["x"] if not self.controller_b_press else self.cursor_sprite.left
-            y = self.window.mouse.data["y"] if not self.controller_b_press else self.cursor_sprite.top                        
-            grid_col = int((x - self.start_x + (CELL_SIZE / 2)) // (CELL_SIZE + SPACING)) # type: ignore
-            grid_row = int((y - self.start_y + (CELL_SIZE / 2)) // (CELL_SIZE + SPACING)) # type: ignore
-
-            if grid_col < 0 or grid_row < 0 or grid_row >= ROWS or grid_col >= COLS:
-                return
-
-            if self.cell_grid[grid_row, grid_col]:
-                self.population -= 1
+            if time.perf_counter() - self.last_create_sound >= 0.05:
+                self.last_create_sound = time.perf_counter()
                 if self.settings_dict.get("sfx", True):
-                    destroy_sound.play(volume=self.settings_dict.get("sfx_volume", 50) / 100)
-                self.sprite_grid[grid_row][grid_col].visible = False
-                self.cell_grid[grid_row, grid_col] = 0
+                    create_sound.play(volume=self.settings_dict.get("sfx_volume", 50) / 100)
+        elif self.window.mouse[arcade.MOUSE_BUTTON_RIGHT] or (self.has_controller and self.controller.b):
+            self.mouse_interaction = 0
+            self.population -= 1
+            if self.settings_dict.get("sfx", True):
+                destroy_sound.play(volume=self.settings_dict.get("sfx_volume", 50) / 100)
+        else:
+            return
+            
+        start_x, start_y = self.image_sprite.x, self.image_sprite.y
+        mouse_x, mouse_y = (self.window.mouse.data.get('x', 0), self.window.mouse.data.get('y', 0)) if not self.has_controller else (self.cursor_sprite.left, self.cursor_sprite.top)
+        grid_row = int((mouse_y - start_y) / (self.image_sprite.height / ROWS))
+        grid_col = int((mouse_x - start_x) / (self.image_sprite.width / COLS))
+
+        if grid_col < 0 or grid_row < 0 or grid_row >= ROWS or grid_col >= COLS:
+            return
+        
+        self.mouse_row = grid_row
+        self.mouse_col = grid_col
+
+    def on_mouse_release(self, x, y, button, modifiers):
+        if button == arcade.MOUSE_BUTTON_LEFT or button == arcade.MOUSE_BUTTON_RIGHT:
+            self.mouse_interaction = -1
 
     def load(self):
         arcade.unschedule(self.update_generation)
@@ -259,6 +273,8 @@ class Game(arcade.gui.UIView):
     def on_draw(self):
         super().on_draw()
 
-        arcade.draw_rect_outline(arcade.rect.LBWH(self.start_x - (SPACING * 2), self.start_y - (SPACING * 2), COLS * (CELL_SIZE + SPACING), ROWS * (CELL_SIZE + SPACING)), arcade.color.WHITE)
+        self.grid_outline.draw()
+        self.image_sprite.draw()
 
-        self.spritelist.draw()
+        if self.has_controller:
+            self.spritelist.draw()
