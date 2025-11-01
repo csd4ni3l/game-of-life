@@ -51,7 +51,7 @@ jobs:
 
       - name: Upload Zipped Build Artifact
         uses: actions/upload-artifact@v4
-        with:
+        with: 
           name: GameOfLife-${{ runner.os }}.zip
           path: zip_output/GameOfLife-${{ runner.os }}.zip
   release:
