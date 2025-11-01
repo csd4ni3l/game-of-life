@@ -76,8 +76,12 @@ else:
 if settings.get("music", True):
     theme_sound.play(volume=settings.get("music_volume", 50) / 100, loop=True)
 
-window = ControllerWindow(width=resolution[0], height=resolution[1], title='Game Of Life', samples=antialiasing, antialiasing=antialiasing > 0, fullscreen=fullscreen, vsync=vsync, resizable=False, style=style)
-
+try:
+    window = ControllerWindow(width=resolution[0], height=resolution[1], title='Game Of Life', samples=antialiasing, antialiasing=antialiasing > 0, fullscreen=fullscreen, vsync=vsync, resizable=False, style=style)
+except (FileNotFoundError, PermissionError) as e:
+    logging.warning(f"Controller support unavailable: {e}. Falling back to regular window.")
+    window = arcade.Window(width=resolution[0], height=resolution[1], title='Game Of Life', samples=antialiasing, antialiasing=antialiasing > 0, fullscreen=fullscreen, vsync=vsync, resizable=False, style=style)
+    
 if vsync:
     window.set_vsync(True)
     display_mode = window.display.get_default_screen().get_mode()
