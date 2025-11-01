@@ -1,5 +1,6 @@
 import pyglet
 
+pyglet.options['shadow_window'] = False  # Fix double window issue on Wayland
 pyglet.options.debug_gl = False
 
 import logging, datetime, os, json, sys, arcade, platform
