@@ -83,7 +83,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.platform }}
-          path: build_output/GameOfLife.*
+          path: build_output/GameOfLife.* 
   
   release:
     runs-on: ubuntu-latest
