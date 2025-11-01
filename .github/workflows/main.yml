@@ -67,7 +67,7 @@ jobs:
         if: matrix.os == 'windows-latest'
         run: |
           Write-Host "Searching for built Windows binary..."
-          Get-ChildItem -Recurse -File -Filter 'lasergates*.exe' | Select-Object -First 1 | ForEach-Object {
+          Get-ChildItem -Recurse -File -Filter 'GameOfLife*.exe' | Select-Object -First 1 | ForEach-Object {
             Write-Host ("Found: " + $_.FullName)
             New-Item -ItemType Directory -Force -Path build_output | Out-Null
             Copy-Item $_.FullName "build_output\GameOfLife.exe"
