@@ -96,7 +96,7 @@ try:
     window = ControllerWindow(width=resolution[0], height=resolution[1], title='Game Of Life', samples=antialiasing, antialiasing=antialiasing > 0, fullscreen=fullscreen, vsync=vsync, resizable=False, style=style, visible=False)
 except (FileNotFoundError, PermissionError) as e:
     logging.warning(f"Controller support unavailable: {e}. Falling back to regular window.")
-    window = arcade.Window(width=resolution[0], height=resolution[1], title='Game Of Life', samples=antialiasing, antialiasing=antialiasing > 0, fullscreen=fullscreen, vsync=vsync, resizable=False, style=style, visible=False)
+    window = arcade.Window(width=resolution[0], height=resolution[1], title='Game Of Life', samples=antialiasing, antialiasing=antialiasing > 0, fullscreen=fullscreen, vsync=vsync, resizable=False, style=style)
     
 if vsync:
     window.set_vsync(True)
@@ -122,7 +122,7 @@ main = Main()
 window.show_view(main)
 
 # Make window visible after all setup is complete (helps prevent double window on Wayland)
-window.set_visible(True)
+#window.set_visible(True)
 
 logging.debug('Game started.')
 
