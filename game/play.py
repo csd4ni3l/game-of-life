@@ -76,7 +76,8 @@ class Game(arcade.gui.UIView):
         self.save_button.on_click = lambda event: self.save()
         self.anchor.add(self.save_button, anchor_x="right", anchor_y="bottom", align_x=-5, align_y=5)
 
-        if self.window.get_controllers():
+        # Check if window has controller support (ControllerWindow has get_controllers, regular Window doesn't)
+        if hasattr(self.window, 'get_controllers') and self.window.get_controllers():
             self.spritelist = arcade.SpriteList()
             self.cursor_sprite = arcade.Sprite(cursor_texture)
             self.spritelist.append(self.cursor_sprite)
