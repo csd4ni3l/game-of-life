@@ -4,6 +4,12 @@ pyglet.options.debug_gl = False
 
 import logging, datetime, os, json, sys, arcade
 
+# Set up paths BEFORE importing modules that load assets
+script_dir = os.path.dirname(os.path.abspath(__file__))
+pyglet.resource.path.append(script_dir)
+pyglet.font.add_directory(os.path.join(script_dir, 'assets', 'fonts'))
+
+
 from utils.utils import get_closest_resolution, print_debug_info, on_exception
 from utils.constants import log_dir, menu_background_color
 from menus.main import Main
@@ -11,9 +17,6 @@ from utils.preload import theme_sound # needed for preload
 from arcade.experimental.controller_window import ControllerWindow
 
 sys.excepthook = on_exception
-
-pyglet.resource.path.append(os.getcwd())
-pyglet.font.add_directory('./assets/fonts')
 
 __builtins__.print = lambda *args, **kwargs: logging.debug(" ".join(map(str, args)))
 
