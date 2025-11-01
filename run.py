@@ -2,7 +2,7 @@ import pyglet
 
 pyglet.options.debug_gl = False
 
-import logging, datetime, os, json, sys, arcade
+import logging, datetime, os, json, sys, arcade, platform
 
 # Set up paths BEFORE importing modules that load assets
 script_dir = os.path.dirname(os.path.abspath(__file__))
@@ -47,6 +47,13 @@ if os.path.exists('settings.json'):
     else:
         antialiasing = 0
 
+    # Wayland workaround (can be overridden with environment variable)
+    if (platform.system() == "Linux" and 
+        os.environ.get("WAYLAND_DISPLAY") and 
+        not os.environ.get("ARCADE_FORCE_MSAA")):
+        logging.info("Wayland detected - disabling MSAA (set ARCADE_FORCE_MSAA=1 to override)")
+        antialiasing = 0
+
     fullscreen = settings['window_mode'] == 'Fullscreen'
     style = arcade.Window.WINDOW_STYLE_BORDERLESS if settings['window_mode'] == 'borderless' else arcade.Window.WINDOW_STYLE_DEFAULT
     vsync = settings['vsync']
@@ -54,6 +61,14 @@ if os.path.exists('settings.json'):
 else:
     resolution = get_closest_resolution()
     antialiasing = 4
+    
+    # Wayland workaround (can be overridden with environment variable)
+    if (platform.system() == "Linux" and 
+        os.environ.get("WAYLAND_DISPLAY") and 
+        not os.environ.get("ARCADE_FORCE_MSAA")):
+        logging.info("Wayland detected - disabling MSAA (set ARCADE_FORCE_MSAA=1 to override)")
+        antialiasing = 0
+    
     fullscreen = False
     style = arcade.Window.WINDOW_STYLE_DEFAULT
     vsync = True
