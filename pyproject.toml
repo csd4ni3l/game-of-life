@@ -5,6 +5,6 @@ description = "Game Of Life recreated with Python, Arcade, pyglet and compute sh
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
-    "arcade==3.2.0",
+    "arcade>=3.3.3",
     "pypresence>=4.3.0",
 ]

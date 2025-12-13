@@ -49,8 +49,8 @@ if os.path.exists('settings.json'):
         antialiasing = 0
 
     # Wayland workaround (can be overridden with environment variable)
-    if (platform.system() == "Linux" and 
-        os.environ.get("WAYLAND_DISPLAY") and 
+    if (platform.system() == "Linux" and
+        os.environ.get("WAYLAND_DISPLAY") and
         not os.environ.get("ARCADE_FORCE_MSAA")):
         logging.info("Wayland detected - disabling MSAA (set ARCADE_FORCE_MSAA=1 to override)")
         antialiasing = 0
@@ -62,14 +62,14 @@ if os.path.exists('settings.json'):
 else:
     resolution = get_closest_resolution()
     antialiasing = 4
-    
+
     # Wayland workaround (can be overridden with environment variable)
-    if (platform.system() == "Linux" and 
-        os.environ.get("WAYLAND_DISPLAY") and 
+    if (platform.system() == "Linux" and
+        os.environ.get("WAYLAND_DISPLAY") and
         not os.environ.get("ARCADE_FORCE_MSAA")):
         logging.info("Wayland detected - disabling MSAA (set ARCADE_FORCE_MSAA=1 to override)")
         antialiasing = 0
-    
+
     fullscreen = False
     style = arcade.Window.WINDOW_STYLE_DEFAULT
     vsync = True
@@ -93,11 +93,11 @@ if settings.get("music", True):
     theme_sound.play(volume=settings.get("music_volume", 50) / 100, loop=True)
 
 try:
-    window = ControllerWindow(width=resolution[0], height=resolution[1], title='Game Of Life', samples=antialiasing, antialiasing=antialiasing > 0, fullscreen=fullscreen, vsync=vsync, resizable=False, style=style, visible=False)
+    window = ControllerWindow(width=resolution[0], height=resolution[1], title='GameName', samples=antialiasing, antialiasing=antialiasing > 0, fullscreen=fullscreen, vsync=vsync, resizable=False, style=style, visible=False)
 except (FileNotFoundError, PermissionError) as e:
     logging.warning(f"Controller support unavailable: {e}. Falling back to regular window.")
-    window = arcade.Window(width=resolution[0], height=resolution[1], title='Game Of Life', samples=antialiasing, antialiasing=antialiasing > 0, fullscreen=fullscreen, vsync=vsync, resizable=False, style=style, visible=False)
-    
+    window = arcade.Window(width=resolution[0], height=resolution[1], title='GameName', samples=antialiasing, antialiasing=antialiasing > 0, fullscreen=fullscreen, vsync=vsync, resizable=False, style=style, visible=False)
+
 if vsync:
     window.set_vsync(True)
     display_mode = window.display.get_default_screen().get_mode()
