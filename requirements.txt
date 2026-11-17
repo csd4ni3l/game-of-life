@@ -6,7 +6,7 @@ attrs==25.4.0
     # via pytiled-parser
 cffi==2.0.0
     # via pymunk
-pillow==11.3.0
+pillow==13.0.0
     # via arcade
 pycparser==2.23
     # via cffi
