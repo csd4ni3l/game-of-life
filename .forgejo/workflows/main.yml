@@ -44,7 +44,8 @@ jobs:
             --assume-yes-for-downloads \
             --include-data-dir=assets=assets \
             --include-data-files=CREDITS=CREDITS \
-            --mode=standalone \
+            --mode=onefile \
+            --output-filename=GameOfLife \
             --nofollow-import-to="*tk*,_codecs,encodings,multiprocessing,gi" \
             --output-dir=build \
             --disable-plugins=tk-inter,multiprocessing,gi \
@@ -53,8 +54,7 @@ jobs:
         run: ccache --show-stats
       - name: Zip
         run: |
-          BUILD_DIR=$(find . -maxdepth 3 -type d -name "*.dist" | head -n 1)
-          zip -r game_of_life_linux.zip "$BUILD_DIR"
+          zip -j game_of_life_linux.zip build/GameOfLife.bin
       - name: Release
         env:
           TOKEN: ${{ secrets.GITHUB_TOKEN }}
