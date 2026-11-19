@@ -9,6 +9,6 @@ button_texture = arcade.gui.NinePatchTexture(64 // 4, 64 // 4, 64 // 4, 64 // 4,
 button_hovered_texture = arcade.gui.NinePatchTexture(64 // 4, 64 // 4, 64 // 4, 64 // 4, arcade.load_texture(os.path.join(_assets_dir, 'graphics', 'button_hovered.png')))
 cursor_texture = arcade.load_texture(os.path.join(_assets_dir, 'graphics', 'cursor.png'))
 
-create_sound = arcade.Sound(os.path.join(_assets_dir, 'sound', 'create.mp3'))
-destroy_sound = arcade.Sound(os.path.join(_assets_dir, 'sound', 'destroy.mp3'))
-theme_sound = arcade.Sound(os.path.join(_assets_dir, 'sound', 'music.mp3'))
+create_sound = arcade.Sound(os.path.join(_assets_dir, 'sound', 'create.wav'))
+destroy_sound = arcade.Sound(os.path.join(_assets_dir, 'sound', 'destroy.wav'))
+theme_sound = arcade.Sound(os.path.join(_assets_dir, 'sound', 'music.wav'))
